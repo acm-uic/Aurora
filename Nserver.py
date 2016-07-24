@@ -1,8 +1,15 @@
 #Mac Carter UIC 
+#
+# Dependancies and install Tornado webserver
+#
+# sudo python -m pip install tornado
+#
+
+
 #In "main" comments partain to the 'todo list' in the code.
 
-DEBUG = False
-#REMOVE
+DEBUG = True
+#REMOVE for runtime
 
 #!/usr/bin/env python
 # """A simple/readable example of driving a Shiftbrite / Octobar / Allegro A6281 
@@ -11,25 +18,20 @@ DEBUG = False
 # You must have /dev/spidev* devices / bcm2708_spi driver for this to work.
 # """
  
-import fcntl, array, RPi.GPIO as GPIO
+# import fcntl, array, RPi.GPIO as GPIO
 #
 #   ^   ENABLE THE SCRIPT ABOVE ^
 #
 
 #TO DO:
-#    figure out gradient from one color to the input colour.
-#   finish blinking, Threading somehow.
+#   figure out gradient from one color to the input colour.
+#   finish blinking, Threading somehofakeLightBoard.
 #   Come up with some way to interperate music. https://rg3.github.io/youtube-dl/download.html
 #   Come up with some way to twitter stuff. https://pypi.python.org/pypi/twitter
 #   pulsing lights needs threading or to spawn a process.
 #   figureout an algorytm for the sky
 #   Where to get weather api python https://code.google.com/p/python-weather-api/wiki/Examples#Yahoo!_Weather
 # 
-#
-#
-#
-#
-#
 #
 #
 
@@ -58,13 +60,12 @@ import fcntl, array, RPi.GPIO as GPIO
 #import the web and socket infromation form tornado packages
 
 import math
-
 import threading
 
-# try:
-#     from Tkinter import *
-# except NameError:
-#     pass
+try:
+    from Tkinter import *
+except NameError:
+    pass
 
 import tornado.web
 import tornado.websocket
@@ -75,8 +76,6 @@ import time #import time, sleep #time libraries
 from random import randint
 
 
-
- 
 ### /Configuration ###
 ## Diagram by Mac Carter
 ## Here is your pi interface
@@ -116,6 +115,7 @@ from random import randint
 #it would be 1, if it's an octobar, 8, etc
  
 NUM_LEDS =14
+PORT_NUMBER = 8888
  
 #In addition to the hardware SPI pins, we require two general GPIO pins for 
 #the enable and latch pins.  It doesn't matter what pins you use
@@ -134,7 +134,6 @@ def printDebug(r,g,b):
     
     #draw led seems to be a lot faster.
 def drawLed(num,r,g,b):
-    num =  num + 1
 
     red8Bit = r>>2
     green8Bit = g>>2
@@ -156,8 +155,8 @@ def drawLed(num,r,g,b):
 
     string = "Light_" + str(num)
     stringTwo = "Text_" + str(num)
-    w.itemconfig(string, fill=fillColor)
-    w.itemconfig(stringTwo, fill=fillColorInverse)
+    fakeLightBoard.itemconfig(string, fill=fillColor)
+    fakeLightBoard.itemconfig(stringTwo, fill=fillColorInverse)
     
     pass 
 
@@ -204,8 +203,8 @@ def decodeColor(shouldRender,num,color):
 
         string = "Light_" + str(num)
         stringTwo = "Text_" + str(num)
-        w.itemconfig(string, fill=fillColor)
-        w.itemconfig(stringTwo, fill=fillColorInverse)
+        fakeLightBoard.itemconfig(string, fill=fillColor)
+        fakeLightBoard.itemconfig(stringTwo, fill=fillColorInverse)
 
         #print(string)
 
@@ -239,40 +238,12 @@ def bootSequence():
         set_led(x, 1023, 1023, 1023)
 
     updateLeds(leds)
-#Wave("asdf")
-
     pass
 
 def delay(number):
     time.time()
     time.sleep(float(number)/1000.0)#convert seconds to miliseconds
     pass
-
-
-
-# def static(message):
-
-# if message[3]=="#":
-
-#     r = "0x"+(message[4]+message[5])
-#     g = "0x"+(message[6]+message[7])
-#     b = "0x"+(message[8]+message[9])
-    
-#     r = (eval(r)<<2)
-#     g = (eval(g)<<2)
-#     b = (eval(b)<<2)
-    
-#     printDebug(r,g,b)
-#     for x in xrange(0,NUM_LEDS):
-#         set_led(x, r, g, b)
-
-#     updateLeds(leds)
-
-# else:
-#     FlashAllRedPattern()
-
-# pass
-
 
 def static(message):
     
@@ -291,23 +262,18 @@ def static(message):
         if message[3]=="#":
             
             for x in xrange(0,NUM_LEDS):
-
                 set_led(x, r, g, b)
             
             updateLeds(leds)
 
         else:
-
             lightNo = eval(message[1]+message[2])
             
-            if lightNo < NUM_LEDS:
-                
+            if lightNo < NUM_LEDS:       
                 set_led(lightNo,r,g,b)
 
     else:
-
         FlashAllRedPattern()
-
     pass
 
 def blinking(message):
@@ -335,11 +301,6 @@ def blinking(message):
 
             updateLeds(leds)
             delay (200)
-
-    pass
-
-def music(message):
-## Libarry still needs to be chosen
     pass
 
 def pulsing(message):#figure out how to maintain luminase intensity still.
@@ -391,157 +352,6 @@ def pulsing(message):#figure out how to maintain luminase intensity still.
                     set_led(x, r, g, b)
 
             updateLeds(leds)
-    pass
-
-def strobe(message):#msg format COMMAND(400),COLOR(#XXXXXX) ,INTERVAL_FLASH (2),(3),(4)readDigits  (10,100,1000) 
-                    #example 400#EF1616240
-                    #broken up 400-#EF1616-2-40
-    if message[3]=="#":
-        r = "0x"+(message[4]+message[5])
-        g = "0x"+(message[6]+message[7])
-        b = "0x"+(message[8]+message[9])
-
-    delayTime = 300# default delayTime
-
-    if message[10]=="2":
-        delayTime = message[11]+message[12]
-
-    if message[10]=="3":
-        delayTime = message[11]+message[12]+message[13]
-
-    if message[10]=="4":
-        delayTime = message[11]+message[12]+message[13]+message[14]
-
-    delayTime = int(delayTime)
-
-    r = (eval(r)<<2)
-    g = (eval(g)<<2)
-    b = (eval(b)<<2)
-
-    while False:#still need to figure out threading.
-        for x in xrange(0,NUM_LEDS):
-            set_led(x, r, g, b)
-
-        delay(delayTime/4)#should cause a nice strobe effect.
-        updateLeds(leds)
-
-        for x in xrange(0,NUM_LEDS):
-            set_led(x, 0, 0, 0)
-
-        delay(delayTime/2)
-        updateLeds(leds)
-
-    pass
-
-def partyMode(message):
-    ##need to experiment more with what function/sets of repeting color combos might work.
-    pass
-
-def sky(message):
-    ## how does a sky behave? going to figure out delta map
-    colorlist
-    ColorList = ["FFCC33","E3A857","FD5E53"]## the three colors.
-
-    # ["FFCC33"]#sunglow yellow
-    # ["E3A857"]#deeper orange
-    # ["FD5E53"]#sunset orange
-
-    pass
-
-def Wave(message):
-    ## color switch of temp colors down the line pre defined.
-    ColorList = ["FF0000","FF4000","FF8000","FFBF00","FFFF00","BFFF00","80FF00","40FF00","00FF00","00FF40","00FF80","00FFBF","00FFFF","00BFFF","0080FF","0040FF","0000FF","4000FF","8000FF","BF00FF","FF00FF","FF00BF","FF0080","FF0040"]
-    for n in xrange(0,10000):
-        for i in xrange(0,NUM_LEDS):
-            l=i+n
-            Hex=ColorList[l%24]
-            r = "0x"+(Hex[0]+Hex[1])
-            g = "0x"+(Hex[2]+Hex[3])
-            b = "0x"+(Hex[4]+Hex[5])
-
-            r = (eval(r)<<2)
-            g = (eval(g)<<2)
-            b = (eval(b)<<2)
-
-            set_led(i, r, g, b)
-
-        delay(200);
-        updateLeds(leds)
-
-    pass
-
-def weather(message):
-    ##need a weather api 
-    pass
-
-def dnddice(message):
-    #come up with encoding scheme, d2 d3 d4 d5 d6
-    pass
-
-def random(message):
-    ##
-    for x in xrange(0,NUM_LEDS):
-        r = randint(0, 1023)
-        g = randint(0, 1023)
-        b = randint(0, 1023)
-        for x in xrange(0,NUM_LEDS):
-            set_led(x, r, g, b)
-
-    updateLeds(leds)
-    pass
-
-def clock(message):
-    # NUM_LEDS=31#fix
-
-    tOld=0
-
-    t = time.time()
-    t = int(t)
-    print(t)
-    while True:#add threading
-        if tOld!=t:
-            tOld=t
-            t = time.time()
-            t = int(t)
-            print("asdf")
-            t = "{0:b}".format(t)
-
-            for x in xrange(0,NUM_LEDS):
-                if t[30-x]=="1":
-                    print x," on"
-                    set_led(x, 1023, 1023, 1023)
-                else:
-                    print x," off"
-                    set_led(x, 0, 0, 0)
-            delay(1000)
-            updateLeds(leds)
-    pass
-
-def gradentSwitch(message):
-    #calculate deltas and switch.
-    pass
-
-def dayTime(message):
-    ##implement time changing elements form red to full bright, maybe transition to sky() and then back to red.
-    pass
-
-def twitter(message):
-    #E00 - String (MESSAGE) - INITIAL(COLOR) - Fade (COLOR)
-    #still ned to find an API for this.
-    pass
-
-def barLights(message):
-    #FOO bar, basically just dim lighting
-    for x in xrange(0,NUM_LEDS):
-        set_led(x, 700, 500, 500)
-
-    updateLeds(leds)
-    pass
-
-def telemetry(lightIn,X1,X2,Y1,Y2,time):
-    X2-X1
-    Y2-Y1
-    LightIn
     pass
 
 def FlashAllRedPattern():
@@ -626,22 +436,6 @@ def set_led(num, r, g, b):
 
 class LightThread (threading.Thread):
     lightStatic = "000"
-    lightBlinking = "100"
-    lightMusic = "200"
-    lightPulsing = "300"
-    lightStrobe = "400"
-    lightPartyMode = "500"
-    lightSky = "600"
-    lightWave = "700"
-    lightWeather = "800"
-    lightDnddice = "900"
-    lightRandom = "A00"
-    lightClock = "B00"
-    lightGradentSwitch = "C00"
-    lightDayTime = "D00"
-    lightTwitter = "E00"
-    lightBarLights = "F00"
-    lightOff = "0FF"
 
 
     def __init__(self):
@@ -659,7 +453,7 @@ class TornadoThread (threading.Thread):
         threading.Thread.__init__(self)
         #application = tornado.web.Application([(r'/',WSHandler)])
         application = tornado.web.Application([(r"/", WebSocketHandler),])
-        application.listen(8888)
+        application.listen(PORT_NUMBER)
     def run(self):
         delay(3000)
         bootSequence()
@@ -688,47 +482,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         print "message header: {}".format(messageHeader)
         if messageHeader[0] == "0":#done
             static(message)
-        if messageHeader == "100":#Enable threading
-            blinking(message)
-        if messageHeader == "200":#Still searching for a library
-            music(message)
-        if messageHeader == "300":#Enable threading
-            pulsing(message)
-        if messageHeader == "400":#Enable threading
-            strobe(message)
-        if messageHeader == "500":#Search for a good distribution of light colors
-            partyMode(message)
-        if messageHeader == "600":#search for a good distibution of random in and out clouds.
-            sky(message)
-        if messageHeader == "700":#done add threading
-            Wave(message)
-        if messageHeader == "800":#need a weather api 
-            weather(message)
-        if messageHeader == "900":#come up with encoding scheme, d2 d3 d4 d5 d6
-            dnddice(message)
-        if messageHeader == "A00":#done add threading
-            random(message)
-        if messageHeader == "B00":#add threading
-            clock(message)
-        if messageHeader == "C00":#calculate deltas and switch.
-            gradentSwitch(message)
-        if messageHeader == "D00":#implement time changing elements form red to full bright, maybe transition to sky() and then back to red.
-            dayTime(message)
-        if messageHeader == "E00":#still ned to find an API for this.
-            twitter(message)
-        if messageHeader == "F00":#BAR get it? bar lighting, just a dim lighting thats all. also done.
-            barLights(message)
-        if messageHeader == "0FF":#done
-            off()
-            
-        #else:
-        #FlashAllRedPattern();#incorrect command.
 
 
         #write the data to the strip    
         updateLeds(leds)
 
-        # self.write_message("message received")
 
 application = tornado.web.Application([
     (r"/", WebSocketHandler),
@@ -768,46 +526,28 @@ if __name__ == "__main__":
 
     if(DEBUG):
         top = Tk()
-        global w
-        w = Canvas(top, width=640, height=480)
+        top.title('On port #'+str(PORT_NUMBER))
+        global fakeLightBoard
+        fakeLightBoard = Canvas(top, width=640, height=640)
 
-        w.create_oval(50, 50, 100, 100, fill="yellow", tags ="Light_1")
-        w.create_text(75, 75, text="1", fill="purple", font="Helvetica 26 bold underline", tags = "Text_1")
-        w.create_oval(150, 50, 200, 100, fill="yellow", tags ="Light_2")
-        w.create_text(175, 75, text="2", fill="purple", font="Helvetica 26 bold underline", tags = "Text_2")
-        w.create_oval(250, 50, 300, 100, fill="yellow", tags ="Light_3")
-        w.create_text(275, 75, text="3", fill="purple", font="Helvetica 26 bold underline", tags = "Text_3")
-        w.create_oval(350, 50, 400, 100, fill="yellow", tags ="Light_4")
-        w.create_text(375, 75, text="4", fill="purple", font="Helvetica 26 bold underline", tags = "Text_4")
-        w.create_oval(450, 50, 500, 100, fill="yellow", tags ="Light_5")
-        w.create_text(475, 75, text="5", fill="purple", font="Helvetica 26 bold underline", tags = "Text_5")
-        w.create_oval(550, 50, 600, 100, fill="yellow", tags ="Light_6")
-        w.create_text(575, 75, text="6", fill="purple", font="Helvetica 26 bold underline", tags = "Text_6")
+        circleDiamiter = 50
+        yPosition = 50 
+        xPosition = 50
 
+        for i in xrange(0,NUM_LEDS):
 
-        w.create_oval(50, 150, 100, 200, fill="yellow", tags ="Light_7")
-        w.create_text(75, 175, text="7", fill="purple", font="Helvetica 26 bold underline", tags = "Text_7")
-        w.create_oval(150, 150, 200, 200, fill="yellow", tags ="Light_8")
-        w.create_text(175, 175, text="8", fill="purple", font="Helvetica 26 bold underline", tags = "Text_8")
-        w.create_oval(250, 150, 300, 200, fill="yellow", tags ="Light_9")
-        w.create_text(275, 175, text="9", fill="purple", font="Helvetica 26 bold underline", tags = "Text_9")
-        w.create_oval(350, 150, 400, 200, fill="yellow", tags ="Light_10")
-        w.create_text(375, 175, text="10", fill="purple", font="Helvetica 26 bold underline", tags = "Text_10")
-        w.create_oval(450, 150, 500, 200, fill="yellow", tags ="Light_11")
-        w.create_text(475, 175, text="11", fill="purple", font="Helvetica 26 bold underline", tags = "Text_11")
-        w.create_oval(550, 150, 600, 200, fill="yellow", tags ="Light_12")
-        w.create_text(575, 175, text="12", fill="purple", font="Helvetica 26 bold underline", tags = "Text_12")
+            xCircleCenter = xPosition+circleDiamiter/2
+            yCircleCenter = yPosition+circleDiamiter/2
 
+            fakeLightBoard.create_oval(xPosition, yPosition, xPosition+circleDiamiter, yPosition+circleDiamiter, fill="yellow", tags ="Light_"+str(i))
+            fakeLightBoard.create_text(xCircleCenter, yCircleCenter, text=str(i), fill="purple", font="Helvetica 26 bold underline", tags = "Text_"+str(i))
+            if xPosition >= 550 :
+                xPosition = -50
+                yPosition += 100
 
-        w.create_oval(50, 250, 100, 300, fill="yellow", tags ="Light_13")
-        w.create_text(75, 275, text="13", fill="purple", font="Helvetica 26 bold underline", tags = "Text_13")
-        w.create_oval(150, 250, 200, 300, fill="yellow", tags ="Light_14")
-        w.create_text(175, 275, text="14", fill="purple", font="Helvetica 26 bold underline", tags = "Text_14")
-        w.create_oval(250, 250, 300, 300, fill="yellow", tags ="Light_15")
-        w.create_text(275, 275, text="15", fill="purple", font="Helvetica 26 bold underline", tags = "Text_15")
-
-
-        w.pack(side="top", fill="both", expand=True)
+            xPosition+=100
+           
+        fakeLightBoard.pack(side="top", fill="both", expand=True)
         top.mainloop()
     
 
